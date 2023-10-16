@@ -1,4 +1,5 @@
 import { FormattableError } from "../framework/router";
+// contains the base error classes you can either directly use or extend from. You are free to add more base errors in that file if you need to (e.g., if your route needs to return I am a teapot error).
 
 /**
  * Corresponds to an action attempted by a user that contains bad values for parameters.
@@ -30,4 +31,18 @@ export class NotAllowedError extends FormattableError {
  */
 export class NotFoundError extends FormattableError {
   public readonly HTTP_CODE = 404;
+}
+
+/**
+ * teapot error
+ */
+export class TeapotError extends FormattableError {
+  public readonly HTTP_CODE = 418;
+}
+
+/**
+ * multiple response error
+ */
+export class MultipleResponseError extends FormattableError {
+  public readonly HTTP_CODE = 300;
 }
