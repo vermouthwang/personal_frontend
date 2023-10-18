@@ -3,9 +3,11 @@ import { ref } from "vue";
 import { fetchy } from "../../utils/fetchy";
 
 const content = ref("");
+const anothercontent = ref("");
 const emit = defineEmits(["refreshPosts"]);
 
 const createPost = async (content: string) => {
+  console.log(content);
   try {
     await fetchy("/api/posts", "POST", {
       body: { content },
@@ -19,6 +21,7 @@ const createPost = async (content: string) => {
 
 const emptyForm = () => {
   content.value = "";
+  console.log("clear");
 };
 </script>
 

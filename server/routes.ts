@@ -207,8 +207,8 @@ class Routes {
    */
   // Event: create a event, add the initial user to the event
   @Router.post("/event")
-  async createEvent(session: WebSessionDoc, name: string, eventinfo: string, eventMember: ObjectId[], address: string) {
-    const new_event = await Event.create_event(name, eventinfo, eventMember);
+  async createEvent(session: WebSessionDoc, name: string, eventinfo: string, address: string, eventMember?: ObjectId[]) {
+    const new_event = await Event.create_event(name, eventinfo, address, eventMember);
     const user = WebSession.getUser(session);
     const geolocationoftheevent = transferaddresstoGeolocation(address);
     if (!new_event.event) {
@@ -223,15 +223,17 @@ class Routes {
     const the_tag = await Tag.searchTag(name, "private_label");
     if (the_tag === null) {
       const the_tag = await Tag.addTag(name, "private_label");
-      return correspond_channel.channel, the_tag.tag, correspond_location.location, new_event.event;
+      return { msg: new_event.msg, channel: correspond_channel.channel, tag: the_tag.tag, location: correspond_location.location, event: new_event.event };
     } else {
       throw new Error("Tag already exists, give a new name to the event");
     }
   }
+  // { msg: created.msg, post: await Responses.post(created.post) };
 
   // Event: get the event by name
   @Router.get("/event")
   async getEventsbyName(name: string) {
+    console.log(name);
     return await Event.getEventByName(name);
   }
 
@@ -320,6 +322,17 @@ class Routes {
     }
     return the_event;
   }
+  // @Router.delete("/posts/:_id")
+  // async deletePost(session: WebSessionDoc, _id: ObjectId) {
+  //   const user = WebSession.getUser(session);
+  //   await Post.isAuthor(user, _id);
+  //   return Post.delete(_id);
+  // }
+  // @Router.delete("/event/:_name")
+  // async deleteEvent(session: WebSessionDoc, _name: ObjectId) {
+  //   const user = WebSession.getUser(session);
+
+  // }
 
   /**
    * Channel routes

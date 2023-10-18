@@ -28,6 +28,7 @@ import { BadValuesError, NotFoundError } from "./errors";
 export interface EventDoc extends BaseDoc {
   name: string; // name of the event
   eventinfo: string; // info of the event
+  address: string; // address of the event
   eventMember: ObjectId[]; // list of event members
 }
 export interface EventInvitationDoc extends BaseDoc {
@@ -41,9 +42,9 @@ export default class EventConcept {
   public readonly events = new DocCollection<EventDoc>("events");
   public readonly eventinvitations = new DocCollection<EventInvitationDoc>("eventinvitations");
   //create a event
-  async create_event(name: string, eventinfo: string, eventMember: ObjectId[] = []) {
+  async create_event(name: string, eventinfo: string, address: string, eventMember: ObjectId[] = []) {
     await this.check_event(name);
-    const _id = await this.events.createOne({ name, eventinfo, eventMember });
+    const _id = await this.events.createOne({ name, eventinfo, address, eventMember });
     return { msg: "Event created successfully!", event: await this.events.readOne({ _id }) };
   }
 
@@ -51,7 +52,7 @@ export default class EventConcept {
   async check_event(name: string) {
     const the_event = await this.events.readOne({ name });
     if (the_event !== null) {
-      throw new BadValuesError(`Event name has already existed!`);
+      throw new BadValuesError(`Event name ${name} has already existed!`);
     }
   }
 
@@ -73,7 +74,8 @@ export default class EventConcept {
   async getEventByName(name: string) {
     const the_event = await this.events.readOne({ name });
     if (the_event === null) {
-      throw new NotFoundError(`Event not found!`);
+      //display the event name in the error message
+      throw new NotFoundError(`Event ${name} not found!`);
     }
     return the_event;
   }
