@@ -2,8 +2,8 @@ import { ObjectId } from "mongodb";
 
 import { Router, getExpressRouter } from "./framework/router";
 
-import { Channel, Event, Friend, Location, Message, Post, Tag, User, WebSession } from "./app";
-import { getGeolocation, transferaddresstoGeolocation } from "./concepts/location";
+import { Access, Channel, Event, Friend, Location, Message, Post, Tag, User, WebSession } from "./app";
+import { getGeolocation } from "./concepts/location";
 import { PostDoc, PostOptions } from "./concepts/post";
 import { UserDoc } from "./concepts/user";
 import { WebSessionDoc } from "./concepts/websession";
@@ -17,7 +17,7 @@ class Routes {
   // TODO
   @Router.get("/location")
   async gettheitemLocation(item: ObjectId) {
-    //now harded-coded
+    //now harded
     return getGeolocation(item);
     // throw new Error("Not implemented yet!");
   }
@@ -188,7 +188,6 @@ class Routes {
   @Router.put("/location")
   async refreshLocation(session: WebSessionDoc) {
     // refresh the current log in user's location
-    throw new Error("Not implemented yet!");
   }
 
   // location: find the nearby location item
@@ -206,34 +205,32 @@ class Routes {
    * Event routes
    */
   // Event: create a event, add the initial user to the event
-  @Router.post("/event")
-  async createEvent(session: WebSessionDoc, name: string, eventinfo: string, address: string, eventMember?: ObjectId[]) {
-    const new_event = await Event.create_event(name, eventinfo, address, eventMember);
-    const user = WebSession.getUser(session);
-    const geolocationoftheevent = transferaddresstoGeolocation(address);
-    if (!new_event.event) {
-      throw new Error("Event not found!");
-    }
-    await Event.join(new_event.event._id, user);
-    //create a channel for the event
-    const correspond_channel = await Channel.create_channel(name, eventMember, "events");
-    //create a location for the event
-    const correspond_location = await Location.makeLoc(name, new_event.event, eventMember, geolocationoftheevent);
-    //create a private tag for the event
-    const the_tag = await Tag.searchTag(name, "private_label");
-    if (the_tag === null) {
-      const the_tag = await Tag.addTag(name, "private_label");
-      return { msg: new_event.msg, channel: correspond_channel.channel, tag: the_tag.tag, location: correspond_location.location, event: new_event.event };
-    } else {
-      throw new Error("Tag already exists, give a new name to the event");
-    }
-  }
-  // { msg: created.msg, post: await Responses.post(created.post) };
+  // @Router.post("/event")
+  // async createEvent(session: WebSessionDoc, name: string, eventinfo: string, eventMember: ObjectId[], address: string) {
+  //   const new_event = await Event.create_event(name, eventinfo, eventMember);
+  //   const user = WebSession.getUser(session);
+  //   const geolocationoftheevent = transferaddresstoGeolocation(address);
+  //   if (!new_event.event) {
+  //     throw new Error("Event not found!");
+  //   }
+  //   await Event.join(new_event.event._id, user);
+  //   //create a channel for the event
+  //   const correspond_channel = await Channel.create_channel(name, eventMember, "events");
+  //   //create a location for the event
+  //   const correspond_location = await Location.makeLoc(name, new_event.event, eventMember, geolocationoftheevent);
+  //   //create a private tag for the event
+  //   const the_tag = await Tag.searchTag(name, "private_label");
+  //   if (the_tag === null) {
+  //     const the_tag = await Tag.addTag(name, "private_label");
+  //     return correspond_channel.channel, the_tag.tag, correspond_location.location, new_event.event;
+  //   } else {
+  //     throw new Error("Tag already exists, give a new name to the event");
+  //   }
+  // }
 
   // Event: get the event by name
   @Router.get("/event")
   async getEventsbyName(name: string) {
-    console.log(name);
     return await Event.getEventByName(name);
   }
 
@@ -322,17 +319,6 @@ class Routes {
     }
     return the_event;
   }
-  // @Router.delete("/posts/:_id")
-  // async deletePost(session: WebSessionDoc, _id: ObjectId) {
-  //   const user = WebSession.getUser(session);
-  //   await Post.isAuthor(user, _id);
-  //   return Post.delete(_id);
-  // }
-  // @Router.delete("/event/:_name")
-  // async deleteEvent(session: WebSessionDoc, _name: ObjectId) {
-  //   const user = WebSession.getUser(session);
-
-  // }
 
   /**
    * Channel routes
@@ -340,24 +326,99 @@ class Routes {
   // Channel: create a channel
   // TODO: Under consideration if the user could create a channel
   @Router.post("/channel")
-  async createChannel(session: WebSessionDoc, name: string, type: "events" | "places", members: ObjectId[], address: string) {
+  async createChannel(
+    session: WebSessionDoc,
+    name: string,
+    type: "events" | "places" = "places",
+    members: ObjectId[] = [],
+    address: string,
+    expiredtime: number,
+    latitude: number = 42.3617,
+    longtitude: number = -71.0895,
+  ) {
+    console.log("hi");
     // let the current log in user create a channel
     const creator = WebSession.getUser(session);
-    const new_channel = await Channel.create_channel(name, members, type);
+    const new_channel = await Channel.create_channel(name, members, type, address, expiredtime);
     if (!new_channel.channel) {
       throw new Error("Channel not found!");
     }
     await Channel.join(new_channel.channel._id, creator);
+    // create an accessobject for the channel
+    const location = { lat: latitude, long: longtitude };
+    const correspond_access = await Access.createAccessObject(name, new_channel.channel, expiredtime, location);
+    // put the user into access object item_timein
+    await Access.putiteminaccessobject(name, creator);
+    return { msg: "Successfully Created Your Channel", newchannel: new_channel.channel, newaccess: correspond_access.accessobject };
     // create a location for the channel
-    const geolocationofthechannel = transferaddresstoGeolocation(address);
-    const correspond_location = await Location.makeLoc(name, new_channel.channel, members, geolocationofthechannel);
-    return correspond_location.location, new_channel;
+    // const geolocationofthechannel = transferaddresstoGeolocation(address);
+    // const correspond_location = await Location.makeLoc(name, new_channel.channel, members, geolocationofthechannel);
+  }
+  @Router.get("/access")
+  async getaccessobject(name: string) {
+    const the_accessobject = await Access.getAccessObject(name);
+    return the_accessobject;
+  }
+  @Router.get("/access/expire")
+  async checkifexpired(session: WebSessionDoc, name: string) {
+    const the_accessobject = await Access.getAccessObject(name);
+    const user = WebSession.getUser(session);
+    if (!the_accessobject) {
+      throw new Error("Access object not found!");
+    }
+    //check if the user is in the channel
+    const expiredbool = await Access.checkifexpired(name, user);
+    return expiredbool;
+  }
+  @Router.delete("/access/expire")
+  async removeexpired(session: WebSessionDoc, name: string) {
+    const the_accessobject = await Access.getAccessObject(name);
+    const user = WebSession.getUser(session);
+    const the_channel = await Channel.getChannelByName(name);
+    if (!the_accessobject) {
+      throw new Error("Access object not found!");
+    }
+    await Access.removeitemfromaccessobject(name, user);
+    await Channel.quiet(the_channel._id, user);
+    return { msg: "remove successfully" };
   }
 
+  @Router.get("/channel/all")
+  async getallChannel() {
+    return await Channel.getallchannels();
+  }
+
+  @Router.get("/channel/member")
+  async getChannelbyMember(session: WebSessionDoc) {
+    return await Channel.getchannelbymember(WebSession.getUser(session));
+  }
+
+  @Router.get("/channel/creator")
+  async getChannelbyCreator(session: WebSessionDoc) {
+    return await Channel.getchannelbycreator(WebSession.getUser(session));
+  }
+
+  @Router.get("/profile/time")
+  async getremainTime(session: WebSessionDoc, channelname: string) {
+    const the_channel = await Channel.getChannelByName(channelname);
+    const the_accessobject = await Access.getAccessObject(channelname);
+    const user = WebSession.getUser(session);
+    if (!the_channel) {
+      throw new Error("Channel not found!");
+    }
+    if (!the_accessobject) {
+      throw new Error("Access object not found!");
+    }
+    //check if the user is in the channel
+    if (await Channel.checkauthorized(the_channel._id, user)) {
+      const remaintime = await Access.getRemainTime(channelname, user);
+      return remaintime;
+    }
+  }
   // Channel: get the channel by name
   @Router.get("/channel")
-  async getChannelbyName(name: string) {
-    return await Channel.getChannelByName(name);
+  async getChannelbyName_soft(name: string) {
+    return await Channel.getChannelByName_soft(name);
   }
 
   // Channel: remove the channel with its name
@@ -384,6 +445,15 @@ class Routes {
     }
   }
 
+  @Router.get("/expiretime")
+  async getexpiretime(session: WebSessionDoc, name: string) {
+    const the_accessobject = await Access.getAccessObject(name);
+    if (!the_accessobject) {
+      throw new Error("Access object not found!");
+    }
+    return the_accessobject.accessobject.expiration;
+  }
+
   @Router.put("/channel/join/location")
   async location_joinChannel(session: WebSessionDoc, channelname: string) {
     const user = WebSession.getUser(session);
@@ -391,16 +461,29 @@ class Routes {
     if (!the_channel) {
       throw new Error("Channel not found!");
     }
-    const location = await Location.getLocationByName(channelname);
-    const isUserInLocation = await Location.matchlocation(user, location._id);
-    if (isUserInLocation) {
+    // check if the user is authorize to join the channel
+    if (await Access.authorizeJoin(channelname, user)) {
       await Channel.join(the_channel._id, user);
-      return { msg: "join successfully", channel: the_channel };
+      await Access.putiteminaccessobject(channelname, user);
+      return { msg: "join successfully", channel: the_channel, access: await Access.getAccessObject(channelname) };
     } else {
-      throw new Error("Only the user nearby the channel can join!");
+      throw new Error("You are not closed enough to join the channel");
     }
+    // const location = await Location.getLocationByName(channelname);
+    // const isUserInLocation = await Location.matchlocation(user, location._id);
+    // if (isUserInLocation) {
+    //   await Channel.join(the_channel._id, user);
+    //   return { msg: "join successfully", channel: the_channel };
+    // } else {
+    //   throw new Error("Only the user nearby the channel can join!");
+    // }
   }
-
+  @Router.put("/access/rejoin")
+  async updateaccess(session: WebSessionDoc, name: string) {
+    const user = WebSession.getUser(session);
+    await Access.updateitemwithtime(name, user);
+    return { msg: "rejoin successfully" };
+  }
   // channel: quit the channel
   @Router.put("/channel/quit")
   async event_quitChannel(session: WebSessionDoc, channelname: string) {
@@ -409,6 +492,11 @@ class Routes {
     const the_channel = await Channel.getChannelByName(channelname);
     if (!the_channel) {
       throw new Error("Channel not found!");
+    }
+    // check if the user is in the channel
+    const isUserInChannel = await Channel.checkauthorized(the_channel._id, user);
+    if (isUserInChannel) {
+      throw new Error("You are already in channel!");
     }
     if (await Channel.checkauthorized(the_channel._id, user)) {
       return await Channel.quiet(the_channel._id, user);

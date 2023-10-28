@@ -1,4 +1,5 @@
 // contains your app definition (i.e., concept instantiations).
+import LocalAccessConcept from "./concepts/LocalAccess";
 import ChannelConcept from "./concepts/channel";
 import EventConcept from "./concepts/event";
 import FriendConcept from "./concepts/friend";
@@ -19,3 +20,4 @@ export const Location = new LocationConcept();
 export const Channel = new ChannelConcept();
 export const Event = new EventConcept();
 export const Tag = new TagConcept();
+export const Access = new LocalAccessConcept();

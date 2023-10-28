@@ -28,6 +28,8 @@ export interface ChannelDoc extends BaseDoc {
   name: string;
   members: ObjectId[]; // list of user ids
   type: "events" | "places";
+  address: string;
+  expired_time: number;
 }
 export interface InvitationDoc extends BaseDoc {
   sender: ObjectId;
@@ -40,9 +42,9 @@ export default class ChannelConcept {
   public readonly channels = new DocCollection<ChannelDoc>("channels");
   public readonly invitations = new DocCollection<InvitationDoc>("invitations");
   //create a channel
-  async create_channel(name: string, members: ObjectId[] = [], type: "events" | "places") {
+  async create_channel(name: string, members: ObjectId[] = [], type: "events" | "places", address: string, expired_time: number) {
     await this.checkchannelexist(name);
-    const _id = await this.channels.createOne({ name, members, type });
+    const _id = await this.channels.createOne({ name, members, type, address, expired_time });
     return { msg: "Channel created successfully!", channel: await this.channels.readOne({ _id }) };
   }
 
@@ -60,7 +62,17 @@ export default class ChannelConcept {
     return the_channel;
   }
 
+  async getChannelByName_soft(name: string) {
+    // get channel if the channel name include the name
+    const the_channel = await this.channels.readMany({ name: { $regex: name, $options: "i" } });
+    if (the_channel === null) {
+      throw new NotFoundError(`Channel not found!`);
+    }
+    return the_channel;
+  }
+
   async getChannelByName(name: string) {
+    // get channel if the channel name include the name
     const the_channel = await this.channels.readOne({ name });
     if (the_channel === null) {
       throw new NotFoundError(`Channel not found!`);
@@ -68,6 +80,22 @@ export default class ChannelConcept {
     return the_channel;
   }
 
+  async getallchannels() {
+    const channels = await this.channels.readMany({});
+    return channels;
+  }
+
+  async getchannelbymember(user: ObjectId) {
+    //return all the channels that the user is included int the channel member (objectid arr)
+    const channels = await this.channels.readMany({ members: { $in: [user] } });
+    return channels;
+  }
+
+  async getchannelbycreator(user: ObjectId) {
+    const allincludedchannel = await this.getchannelbymember(user);
+    const channels = allincludedchannel.filter((channel) => channel.members[0].toString() === user.toString());
+    return channels;
+  }
   async checkchannelexist(name: string) {
     const the_channel = await this.channels.readOne({ name });
     if (the_channel !== null) {
@@ -88,7 +116,7 @@ export default class ChannelConcept {
   // remove user from channel
   async quiet(channel: ObjectId, user: ObjectId) {
     const the_channel = await this.getChannelById(channel);
-    the_channel.members = the_channel.members.filter((member) => member !== user);
+    the_channel.members = the_channel.members.filter((member) => member.toString() !== user.toString());
     await this.channels.updateOne({ _id: channel }, the_channel);
     return { msg: "User quited successfully!", channel: await this.channels.readOne({ _id: channel }) };
   }

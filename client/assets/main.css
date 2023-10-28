@@ -2,7 +2,37 @@
 
 :root {
   --red: rgb(208, 67, 12);
-  --base-bg: #f1f3f5;
+  --base-bg: #CCE0ED;
+
+  /* background */
+
+}
+main.colorful {
+  /* extend to the whole screen height */
+  height: 90vh;
+  /* background-color: #8cbd8d; */
+  /* background-size: cover; */
+  background-image: url("./images/backgroundhome.png");
+  /* make the background image extend to the whole page */
+  background-size: 100% 100%;
+}
+
+p.introtext {
+    width: 50%;
+    font-size: 19px;
+    text-align: center;
+    margin: 0px 30px 30px 30px;
+    color: rgb(56, 154, 41);
+
+}
+
+p.function_explanation {
+  width: 80%;
+  font-size: 15px;
+  text-align: center;
+  /* align-items: center; */
+  margin: 0px 60px 30px 100px;
+  color: rgb(55, 56, 54);
 }
 
 button.btn-small {
@@ -15,7 +45,7 @@ button.button-error {
 }
 
 a.button {
-  color: #212529;
+  color: #c4e1bb;
   background-color: #f1f3f5;
   border: 1px solid #dee2e6;
   border-radius: 0.25em;
