@@ -16,13 +16,14 @@ const getChannel = async (channelname?: string) => {
     }
     channels.value = all_channels;
   } else {
-    let searched_channel;
-    try {
-      searched_channel = await fetchy("/api/channel", "GET", { name: channelname });
-    } catch (_) {
-      return;
-    }
-    channels.value = searched_channel;
+    return;
+    // let searched_channel;
+    // try {
+    //   searched_channel = await fetchy("/api/channel", "GET", { name: channelname });
+    // } catch (_) {
+    //   return;
+    // }
+    // channels.value = searched_channel;
   }
 };
 let loaded = ref(false);
